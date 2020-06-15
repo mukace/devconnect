@@ -1,5 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors');
+
 const app = express();
 const PORT = process.env.PORT || 1000;
 
@@ -7,6 +9,12 @@ const usersRouter = require('./routes/api/userAuth');
 const postsRouter = require('./routes/api/posts');
 const profileRouter = require('./routes/api/profile');
 
+
+// Body Parser middleware
+app.use(express.json());
+
+// cors middleware
+app.use(cors({ origin: 'http://localhost:3000' }));
 
 // DB config
 const db = require('./config/keys').mongoURI;
