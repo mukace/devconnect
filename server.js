@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const passport = require('passport');
 
 const app = express();
 const PORT = process.env.PORT || 1000;
@@ -13,23 +14,27 @@ const profileRouter = require('./routes/api/profile');
 // Body Parser middleware
 app.use(express.json());
 
-// cors middleware
+// Cors Middleware
 app.use(cors({ origin: 'http://localhost:3000' }));
+
+// Passport Middleware
+app.use(passport.initialize());
+
+// Passport Config
+require('./config/passport')(passport);
 
 // DB config
 const db = require('./config/keys').mongoURI;
 
 // Connect to MongoDB
-// mongoose
-//     .connect(db, { useUnifiedTopology: true, useNewUrlParser: true })
-//     .then(() => console.log('MongoDB Connected'))
-//     .catch(error => console.log(error));
-
-
-// Connect to MongoDB
 const connectDB = (async () => {
     try {
-        await mongoose.connect(db, { useUnifiedTopology: true, useNewUrlParser: true });
+        await mongoose.connect(db,
+            {
+                useUnifiedTopology: true,
+                useNewUrlParser: true,
+                useCreateIndex: true
+            });
 
         console.log('MongoDB Connected');
     } catch (error) {
@@ -42,9 +47,5 @@ const connectDB = (async () => {
 app.use('/api/users', usersRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/posts', postsRouter);
-
-app.get('/', (req, res) => res.send('hello'));
-
-
 
 app.listen(PORT, () => console.log(`server running on port ${PORT}`));

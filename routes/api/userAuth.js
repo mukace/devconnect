@@ -2,36 +2,38 @@ const router = require('express').Router();
 const bcrypt = require('bcryptjs');
 const gravatar = require('gravatar');
 const jwt = require('jsonwebtoken');
+const passport = require('passport');
 
-const User = require('./../../models/User');
+const UserModel = require('./../../models/User');
+
 const keys = require('./../../config/keys');
 
-// @route GET api/users/test
-// @desc      Tests users route
-// @access    Public
-router.get('/test', (req, res) => res.json({ msg: "Users Work" }));
+const { userValidator, userValidationResult } = require('../../validations/register');
+const { loginValidator, loginValidationResult } = require('../../validations/login');
+
 
 // @route POST api/users/register
 // @desc       Create a new User
 // @access     Public
-router.post('/register', async (req, res) => {
+router.post('/register', userValidator, userValidationResult, async (req, res) => {
     const { name, email, password } = req.body;
 
     try {
-        const existingUser = await User.findOne({ email });
+        const existingUser = await UserModel.findOne({ email });
 
         if (existingUser) return res.status(400).json({ email: 'User already exists' });
 
         const salt = await bcrypt.genSalt(10);
+
         const bcryptPassword = await bcrypt.hash(password, salt);
 
         const avatar = gravatar.url(email, {
             s: '200', // size
             r: 'pg', // Rating
             d: 'mm' // Deafault
-        })
+        });
 
-        const newUser = await new User({
+        const newUser = await new UserModel({
             name,
             email,
             password: bcryptPassword,
@@ -40,8 +42,8 @@ router.post('/register', async (req, res) => {
 
         res.json({ success: 'Account created Succesfully!' });
 
-    } catch (error) {
-        console.error(error.message);
+    } catch (err) {
+        console.error(err.message);
         res.status(500).send("Server error");
     }
 });
@@ -49,11 +51,11 @@ router.post('/register', async (req, res) => {
 // @route POST api/users/login
 // @desc       login user / genrate JWT token
 // @access     Public
-router.post('/login', async (req, res) => {
+router.post('/login', loginValidator, loginValidationResult, async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        const existingUser = await User.findOne({ email });
+        const existingUser = await UserModel.findOne({ email });
 
         if (!existingUser) return res.status(404).json({ email: 'User not found' });
 
@@ -70,10 +72,17 @@ router.post('/login', async (req, res) => {
         const jwtToken = jwt.sign(jwtPayload, keys.secretOrKey, { expiresIn: "1h" });
 
         res.json({ success: true, token: `Bearer ${jwtToken}` });
-    } catch (error) {
-        console.error(error.message);
+    } catch (err) {
+        console.error(err.message);
         res.status(500).send('Server Error');
     }
+});
+
+// @route GET api/users/current
+// @desc       Return Current User
+// @access     Private
+router.get('/current', passport.authenticate('jwt', { session: false }), async (req, res) => {
+    res.json(req.user._id);
 });
 
 module.exports = router;
